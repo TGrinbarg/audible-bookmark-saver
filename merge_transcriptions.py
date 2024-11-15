@@ -13,9 +13,14 @@ def merge_transcriptions(input_file, output_file):
 
     merged_entries = {}
     processed_keys = set()
+    total_items = len(data)
 
-    # Iterate over each item in the JSON
-    for key1, text1 in data.items():
+    # Convert data to a sorted list for sequential access
+    data_items = list(data.items())
+
+    # Iterate over each item
+    for i in range(total_items):
+        key1, text1 = data_items[i]
         if key1 in processed_keys:
             continue
 
@@ -23,13 +28,14 @@ def merge_transcriptions(input_file, output_file):
         merged_text = text1
         overlaps = [key1]
 
-        # Check for overlapping entries
-        for key2, text2 in data.items():
-            if key1 != key2 and key2 not in processed_keys and is_core_overlap(text1, text2):
+        # Check only sequential previous entries for overlap
+        for j in range(i - 1, max(i - 10, -1), -1):  # Look back up to 10 previous entries
+            key2, text2 = data_items[j]
+            if key2 not in processed_keys and is_core_overlap(text1, text2):
                 overlaps.append(key2)
                 processed_keys.add(key2)
                 
-                # Add non-overlapping start/end text
+                # Add non-overlapping start/end text from text2
                 overlap_start = text2 if text2 in merged_text else ""
                 merged_text = f"{merged_text} {overlap_start}".strip()
 
@@ -45,6 +51,23 @@ def merge_transcriptions(input_file, output_file):
         json.dump(merged_entries, file, indent=4)
     
     print(f"Merged transcriptions saved to {output_file}")
+    
+def extract_texts(input_file, output_file):
+    # Load the merged JSON data
+    with open(input_file, 'r') as file:
+        data = json.load(file)
+    
+    # Sort entries by key to maintain value order
+    sorted_texts = [entry["text"] for key, entry in sorted(data.items(), key=lambda x: int(x[0]))]
+    
+    # Write the texts to a plain text file with a newline between each
+    with open(output_file, 'w') as file:
+        file.write("\n\n".join(sorted_texts))
+    
+    print(f"Extracted texts saved to {output_file}")
 
-# Run the function (adjust 'input_file.json' and 'output_file.json' paths as needed)
+# Run the function
 merge_transcriptions('transcribed_notes_sorted_by_numeric_keys.json', 'merged_transcriptions.json')
+
+# Run the function (adjust 'merged_transcriptions.json' and 'output_texts.txt' as needed)
+extract_texts('merged_transcriptions.json', 'output_texts.txt')
