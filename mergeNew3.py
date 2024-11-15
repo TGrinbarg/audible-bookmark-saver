@@ -1,24 +1,27 @@
 import re
+from difflib import SequenceMatcher
 
 def has_overlap(line1, line2, threshold=0.5):
     """Check if there's a significant overlap between the middle portions of line1 and line2."""
+    # Skip if either line is empty
+    if not line1.strip() or not line2.strip():
+        return False
+    
     middle1 = line1[len(line1) // 4 : -len(line1) // 4]  # Take the middle half
     middle2 = line2[len(line2) // 4 : -len(line2) // 4]
     
-    # Compute the similarity by finding the common substring length over the length of the smaller string
-    match_length = len(set(middle1.split()) & set(middle2.split()))
-    min_length = min(len(middle1.split()), len(middle2.split()))
-    
-    return match_length / min_length >= threshold
+    # Compute similarity ratio between middle portions of the lines
+    match_ratio = SequenceMatcher(None, middle1, middle2).ratio()
+    return match_ratio >= threshold
 
 def merge_lines(line1, line2):
     """Merge two lines by keeping the start of line1, middle overlap, and end of line2."""
-    # Find overlap between the two lines
+    # Locate the overlap between the two lines
     overlap_start = max(0, min(len(line1), len(line2)) // 2)
-    while not line2.startswith(line1[overlap_start:]):
+    while not line2.startswith(line1[overlap_start:]) and overlap_start < len(line1):
         overlap_start += 1
-    merged_line = line1[:overlap_start] + line2  # Combine the start of line1 and end of line2
-    return merged_line
+    merged_line = line1[:overlap_start] + line2 if overlap_start < len(line1) else line1 + " " + line2
+    return merged_line.strip()
 
 def process_file(input_file, output_file):
     with open(input_file, 'r') as f:
@@ -28,6 +31,12 @@ def process_file(input_file, output_file):
     i = 0
     while i < len(lines) - 1:
         line1, line2 = lines[i].strip(), lines[i + 1].strip()
+        
+        # Skip empty lines
+        if not line1:
+            i += 1
+            continue
+
         if has_overlap(line1, line2):
             # Merge and skip the next line as it is merged into the current line
             merged_line = merge_lines(line1, line2)
@@ -38,11 +47,12 @@ def process_file(input_file, output_file):
             i += 1
 
     # Add any remaining line that wasn't processed
-    if i == len(lines) - 1:
+    if i == len(lines) - 1 and lines[-1].strip():
         merged_lines.append(lines[-1].strip())
 
+    # Add a blank line between each merged line
     with open(output_file, 'w') as f:
-        f.write("\n".join(merged_lines))
+        f.write("\n\n".join(merged_lines) + "\n\n")  # Double newline for paragraph spacing
 
     print(f"Merged file saved as {output_file}")
 
