@@ -71,3 +71,5 @@ merge_transcriptions('transcribed_notes_sorted_by_numeric_keys.json', 'merged_tr
 
 # Run the function (adjust 'merged_transcriptions.json' and 'output_texts.txt' as needed)
 extract_texts('merged_transcriptions.json', 'output_texts.txt')
+
+
